@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <!-- Main Background Gradient -->
+    <gradient
+        android:startColor="#FF2196F3"
+        android:centerColor="#FF42A5F5"
+        android:endColor="#FF1976D2"
+        android:type="radial"
+        android:gradientRadius="32dp" />
+
+    <!-- Border Stroke -->
+    <stroke
+        android:width="2dp"
+        android:color="#FF1565C0" />
+
+    <!-- Size -->
+    <size
+        android:width="64dp"
+        android:height="64dp" />
+
+    <!-- Shadow Effect (optional) -->
+    <solid android:color="@android:color/transparent" />
+
+</shape>

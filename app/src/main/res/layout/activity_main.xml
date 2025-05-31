@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/main_background_gradient"
+    android:fitsSystemWindows="true">
+
+    <!-- Main Content Container -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginBottom="80dp"
+        android:fillViewport="true"
+        android:overScrollMode="never">
+
+        <FrameLayout
+            android:id="@+id/fragment_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="4dp" />
+
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Floating Bottom Navigation -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="20dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="12dp"
+        app:cardBackgroundColor="@color/surface_color"
+        app:strokeWidth="0dp">
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_navigation"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@android:color/transparent"
+            app:itemIconTint="@color/red_normal"
+            app:itemTextColor="@color/red_pressed"
+            app:itemRippleColor="@color/ripple_color"
+            app:labelVisibilityMode="selected"
+            app:itemIconSize="20dp"
+            app:itemTextAppearanceActive="@style/BottomNavTextActive"
+            app:itemTextAppearanceInactive="@style/BottomNavTextInactive"
+            app:menu="@menu/bottom_navigation_menu" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
