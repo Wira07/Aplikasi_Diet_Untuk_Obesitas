@@ -76,5 +76,20 @@
     <color name="black_30">#4D000000</color>
     <color name="accent_bright">#00cec9</color>
 
+    <!-- Shadow colors -->
+    <color name="shadow_dark">#80000000</color>
+
+    <!-- Light color variants -->
+    <color name="success_light">#4CAF50</color>
+    <color name="secondary_light">#FF9800</color>
+    <!-- Base colors (if not already defined) -->
+    <color name="secondary">#FF5722</color>
+
+    <!-- BMI scale colors -->
+    <color name="bmi_underweight">#03A9F4</color>
+    <color name="bmi_normal">#4CAF50</color>
+    <color name="bmi_overweight">#FF9800</color>
+    <color name="bmi_obese">#F44336</color>
+
 </resources>
 
