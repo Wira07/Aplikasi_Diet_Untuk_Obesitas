@@ -3,7 +3,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/gradient_background"
     android:fillViewport="true">
 
 <LinearLayout
@@ -18,8 +17,7 @@ android:padding="32dp">
     android:layout_height="120dp"
     android:layout_marginBottom="32dp"
     android:contentDescription="App Logo"
-    android:src="@drawable/ic_diet_logo"
-    app:tint="@color/white" /> <!-- PERBAIKAN DI SINI -->
+    android:src="@drawable/ic_diet_logo"/>
 
 <TextView
     android:layout_width="wrap_content"
@@ -27,7 +25,7 @@ android:padding="32dp">
     android:layout_marginBottom="8dp"
     android:fontFamily="@font/poppins_bold"
     android:text="DietSehat"
-    android:textColor="@color/white"
+    android:textColor="@color/black_30"
     android:textSize="28sp" />
 
 <TextView
@@ -36,7 +34,7 @@ android:padding="32dp">
     android:layout_marginBottom="40dp"
     android:fontFamily="@font/poppins_regular"
     android:text="Aplikasi Diet untuk Obesitas"
-    android:textColor="@color/white_70"
+    android:textColor="@color/black_30"
     android:textSize="16sp" />
 
 <com.google.android.material.textfield.TextInputLayout
@@ -51,8 +49,8 @@ android:padding="32dp">
         android:layout_height="wrap_content"
         android:hint="Email"
         android:inputType="textEmailAddress"
-        android:textColor="@color/white"
-        android:textColorHint="@color/white_70" />
+        android:textColor="@color/black_30"
+        android:textColorHint="@color/black_30" />
 
 </com.google.android.material.textfield.TextInputLayout>
 
@@ -69,7 +67,7 @@ android:padding="32dp">
         android:hint="Password"
         android:inputType="textPassword"
         android:textColor="@color/white"
-        android:textColorHint="@color/white_70" />
+        android:textColorHint="@color/black_30" />
 
 </com.google.android.material.textfield.TextInputLayout>
 
@@ -81,7 +79,7 @@ android:padding="32dp">
     android:background="@drawable/button_primary"
     android:fontFamily="@font/poppins_semibold"
     android:text="Masuk"
-    android:textColor="@color/primary_dark"
+    android:textColor="@color/white"
     android:textSize="16sp" />
 
 <TextView
@@ -90,7 +88,7 @@ android:padding="32dp">
     android:layout_height="wrap_content"
     android:fontFamily="@font/poppins_medium"
     android:text="Belum punya akun? Daftar disini"
-    android:textColor="@color/white"
+    android:textColor="@color/black_30"
     android:textSize="14sp" />
 
 </LinearLayout>
