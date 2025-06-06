@@ -4,6 +4,7 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -30,19 +31,17 @@ class ProfileFragment : Fragment() {
     private var tvEmail: TextView? = null
     private var tvProfileName: TextView? = null
     private var tvProfileEmail: TextView? = null
-    private var tvBmi: TextView? = null
-    private var tvBmiStatus: TextView? = null
     private var tvAge: TextView? = null
     private var tvGender: TextView? = null
-    private var tvHeight: TextView? = null
-    private var tvWeight: TextView? = null
     private var btnLogout: Button? = null
-    private var btnEditProfile: Button? = null
+    private var btnWhatsAppCS: Button? = null // Renamed from btnEditProfile
 
     // Card views for animations
     private var personalInfoCard: CardView? = null
-    private var bmiCard: CardView? = null
     private var profilePictureCard: CardView? = null
+
+    // WhatsApp CS number
+    private val whatsappCSNumber = "081219195308"
 
     companion object {
         private const val TAG = "ProfileFragment"
@@ -77,27 +76,17 @@ class ProfileFragment : Fragment() {
         tvEmail = view.findViewById(R.id.tv_email) // Jika ada di layout lain
         tvAge = view.findViewById(R.id.tv_age)
         tvGender = view.findViewById(R.id.tv_gender)
-        tvHeight = view.findViewById(R.id.tv_height)
-        tvWeight = view.findViewById(R.id.tv_weight)
-        tvBmi = view.findViewById(R.id.tv_bmi)
-        tvBmiStatus = view.findViewById(R.id.tv_bmi_status)
         btnLogout = view.findViewById(R.id.btn_logout)
-        btnEditProfile = view.findViewById(R.id.btn_edit_profile)
+        btnWhatsAppCS = view.findViewById(R.id.btn_edit_profile) // Still using same XML ID
 
         // Card views
         personalInfoCard = view.findViewById(R.id.card_personal_info)
-        bmiCard = view.findViewById(R.id.card_bmi)
         profilePictureCard = view.findViewById(R.id.card_profile_picture)
     }
 
     private fun setupInitialAnimations() {
         // Set initial states for animations
         personalInfoCard?.apply {
-            alpha = 0f
-            translationY = 100f
-        }
-
-        bmiCard?.apply {
             alpha = 0f
             translationY = 100f
         }
@@ -112,7 +101,7 @@ class ProfileFragment : Fragment() {
             translationX = 100f
         }
 
-        btnEditProfile?.apply {
+        btnWhatsAppCS?.apply {
             alpha = 0f
             translationX = -100f
         }
@@ -137,19 +126,10 @@ class ProfileFragment : Fragment() {
             animateCardIn(personalInfoCard, 0)
         }, 200)
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            animateCardIn(bmiCard, 100)
-        }, 400)
-
         // Buttons slide in animation
         Handler(Looper.getMainLooper()).postDelayed({
             animateButtonsIn()
-        }, 600)
-
-        // Text shimmer effect - DIHILANGKAN
-        // Handler(Looper.getMainLooper()).postDelayed({
-        //     startTextShimmerEffect()
-        // }, 800)
+        }, 400)
     }
 
     private fun animateCardIn(card: CardView?, delay: Long = 0) {
@@ -177,7 +157,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun animateButtonsIn() {
-        btnEditProfile?.let { btn ->
+        btnWhatsAppCS?.let { btn ->
             val fadeIn = ObjectAnimator.ofFloat(btn, "alpha", 0f, 1f)
             val slideIn = ObjectAnimator.ofFloat(btn, "translationX", -100f, 0f)
 
@@ -197,62 +177,6 @@ class ProfileFragment : Fragment() {
             animSet.duration = 500
             animSet.interpolator = DecelerateInterpolator()
             animSet.start()
-        }
-    }
-
-    // FUNGSI INI MASIH ADA TAPI TIDAK DIPANGGIL
-    private fun startTextShimmerEffect() {
-        // Create shimmer effect for profile name
-        tvProfileName?.let { textView ->
-            val shimmer = ObjectAnimator.ofFloat(textView, "alpha", 1f, 0.6f, 1f)
-            shimmer.duration = 2000
-            shimmer.repeatCount = ValueAnimator.INFINITE
-            shimmer.repeatMode = ValueAnimator.REVERSE
-            shimmer.start()
-        }
-    }
-
-    private fun animateBMIUpdate(newBmi: Double, newStatus: String) {
-        // Animate BMI value change
-        tvBmi?.let { bmiView ->
-            val currentText = bmiView.text.toString()
-            val currentValue = try {
-                currentText.toDouble()
-            } catch (e: NumberFormatException) {
-                0.0
-            }
-
-            val animator = ValueAnimator.ofFloat(currentValue.toFloat(), newBmi.toFloat())
-            animator.duration = 1500
-            animator.interpolator = AccelerateDecelerateInterpolator()
-            animator.addUpdateListener { animation ->
-                val animatedValue = animation.animatedValue as Float
-                bmiView.text = String.format("%.1f", animatedValue)
-            }
-            animator.start()
-
-            // Scale animation for BMI
-            val scaleX = ObjectAnimator.ofFloat(bmiView, "scaleX", 1f, 1.2f, 1f)
-            val scaleY = ObjectAnimator.ofFloat(bmiView, "scaleY", 1f, 1.2f, 1f)
-            val scaleSet = AnimatorSet()
-            scaleSet.playTogether(scaleX, scaleY)
-            scaleSet.duration = 800
-            scaleSet.start()
-        }
-
-        // Animate BMI status with color change effect
-        tvBmiStatus?.let { statusView ->
-            val fadeOut = ObjectAnimator.ofFloat(statusView, "alpha", 1f, 0f)
-            fadeOut.duration = 300
-            fadeOut.addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) {
-                    statusView.text = newStatus
-                    val fadeIn = ObjectAnimator.ofFloat(statusView, "alpha", 0f, 1f)
-                    fadeIn.duration = 300
-                    fadeIn.start()
-                }
-            })
-            fadeOut.start()
         }
     }
 
@@ -288,13 +212,11 @@ class ProfileFragment : Fragment() {
                     val email = document.getString("email")
                     val age = document.getLong("age")
                     val gender = document.getString("gender")
-                    val height = document.getDouble("height")
-                    val weight = document.getDouble("weight")
 
                     Log.d(TAG, "Retrieved data - Name: $name, Email: $email, Age: $age")
 
                     // Animate data loading
-                    animateDataLoading(name, email, age, gender, height, weight)
+                    animateDataLoading(name, email, age, gender)
 
                 } else {
                     Log.w(TAG, "Document does not exist for user: ${currentUser.uid}")
@@ -313,30 +235,17 @@ class ProfileFragment : Fragment() {
 
     private fun showLoadingAnimation() {
         // Loading animation dihilangkan - tidak ada animasi kedip-kedip
-        // personalInfoCard?.let { card ->
-        //     val pulse = ObjectAnimator.ofFloat(card, "alpha", 0.3f, 0.7f, 0.3f)
-        //     pulse.duration = 1000
-        //     pulse.repeatCount = ValueAnimator.INFINITE
-        //     pulse.start()
-        // }
     }
 
     private fun hideLoadingAnimation() {
         // Tidak ada loading animation yang perlu dihentikan
-        // personalInfoCard?.let { card ->
-        //     val pulseAnimator = card.tag as? ObjectAnimator
-        //     pulseAnimator?.cancel()
-        //     card.alpha = 1f
-        // }
     }
 
     private fun animateDataLoading(
         name: String?,
         email: String?,
         age: Long?,
-        gender: String?,
-        height: Double?,
-        weight: Double?
+        gender: String?
     ) {
         hideLoadingAnimation()
 
@@ -354,21 +263,6 @@ class ProfileFragment : Fragment() {
             animateTextUpdate(tvAge, if (age != null) "${age} tahun" else "")
             animateTextUpdate(tvGender, gender ?: "")
         }, 200)
-
-        Handler(Looper.getMainLooper()).postDelayed({
-            animateTextUpdate(tvHeight, if (height != null) "${height.toInt()} cm" else "")
-            animateTextUpdate(tvWeight, if (weight != null) "${weight.toInt()} kg" else "")
-        }, 400)
-
-        // Hitung dan tampilkan BMI dengan animasi
-        if (height != null && weight != null && height > 0) {
-            val bmiValue = calculateBMI(weight, height)
-            val bmiStatus = getBMIStatus(bmiValue)
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                animateBMIUpdate(bmiValue, bmiStatus)
-            }, 600)
-        }
 
         // Start entrance animations
         animateViewsIn()
@@ -401,11 +295,10 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        btnEditProfile?.setOnClickListener {
+        btnWhatsAppCS?.setOnClickListener {
             // Add button press animation
             animateButtonPress(it) {
-                // TODO: Navigate to edit profile
-                showToast("Edit Profile akan segera tersedia")
+                openWhatsAppCS()
             }
         }
 
@@ -413,9 +306,38 @@ class ProfileFragment : Fragment() {
         personalInfoCard?.setOnClickListener {
             animateCardPress(it)
         }
+    }
 
-        bmiCard?.setOnClickListener {
-            animateCardPress(it)
+    /**
+     * Opens WhatsApp to chat with Customer Service
+     */
+    private fun openWhatsAppCS() {
+        try {
+            // Prepare WhatsApp message
+            val message = "Halo, saya ingin bertanya mengenai aplikasi diet."
+            val encodedMessage = Uri.encode(message)
+
+            // Create WhatsApp intent with phone number and message
+            val whatsappIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("https://api.whatsapp.com/send?phone=$whatsappCSNumber&text=$encodedMessage")
+            }
+
+            // Check if WhatsApp is installed
+            val packageManager = requireContext().packageManager
+            if (whatsappIntent.resolveActivity(packageManager) != null) {
+                startActivity(whatsappIntent)
+                showToast("Membuka WhatsApp CS...")
+            } else {
+                // If WhatsApp is not installed, open in browser
+                val browserIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://web.whatsapp.com/send?phone=$whatsappCSNumber&text=$encodedMessage")
+                }
+                startActivity(browserIntent)
+                showToast("Membuka WhatsApp Web...")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error opening WhatsApp: ", e)
+            showToast("Gagal membuka WhatsApp. Silakan coba lagi.")
         }
     }
 
@@ -481,20 +403,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun calculateBMI(weight: Double, height: Double): Double {
-        val heightInMeter = height / 100
-        return weight / (heightInMeter * heightInMeter)
-    }
-
-    private fun getBMIStatus(bmi: Double): String {
-        return when {
-            bmi < 18.5 -> "Underweight"
-            bmi < 25.0 -> "Normal"
-            bmi < 30.0 -> "Overweight"
-            else -> "Obese"
-        }
-    }
-
     private fun showToast(message: String) {
         if (isAdded) {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
@@ -524,14 +432,9 @@ class ProfileFragment : Fragment() {
         tvProfileEmail = null
         tvAge = null
         tvGender = null
-        tvHeight = null
-        tvWeight = null
-        tvBmi = null
-        tvBmiStatus = null
         btnLogout = null
-        btnEditProfile = null
+        btnWhatsAppCS = null // Updated variable name
         personalInfoCard = null
-        bmiCard = null
         profilePictureCard = null
     }
 }

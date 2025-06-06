@@ -18,9 +18,12 @@ class HomeFragment : Fragment() {
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var tvWelcome: TextView
-    private lateinit var tvBMI: TextView
-    private lateinit var tvBMIStatus: TextView
     private lateinit var tvDailyTip: TextView
+    private lateinit var tvCurrentWeight: TextView
+    private lateinit var tvTargetWeight: TextView
+    private lateinit var tvWeightToLose: TextView
+    private var currentWeight: Double = 0.0
+    private var currentHeight: Double = 0.0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -34,7 +37,6 @@ class HomeFragment : Fragment() {
 
         initViews(view)
         loadUserData()
-        setDailyTip()
         animateCards(view)
 
         return view
@@ -42,9 +44,10 @@ class HomeFragment : Fragment() {
 
     private fun initViews(view: View) {
         tvWelcome = view.findViewById(R.id.tv_welcome)
-        tvBMI = view.findViewById(R.id.tv_bmi)
-        tvBMIStatus = view.findViewById(R.id.tv_bmi_status)
         tvDailyTip = view.findViewById(R.id.tv_daily_tip)
+        tvCurrentWeight = view.findViewById(R.id.tv_current_weight)
+        tvTargetWeight = view.findViewById(R.id.tv_target_weight)
+        tvWeightToLose = view.findViewById(R.id.tv_weight_to_lose)
     }
 
     private fun loadUserData() {
@@ -53,68 +56,102 @@ class HomeFragment : Fragment() {
             db.collection("users").document(user.uid)
                 .get()
                 .addOnSuccessListener { document ->
-                    if (!isAdded) return@addOnSuccessListener  // 🔒 Cegah crash jika fragment tidak aktif
+                    if (!isAdded) return@addOnSuccessListener
 
                     if (document.exists()) {
                         val name = document.getString("name") ?: "User"
-                        val bmi = document.getDouble("bmi") ?: 0.0
+                        val weight = document.getDouble("weight") ?: 0.0
+                        val height = document.getDouble("height") ?: 0.0
+
+                        currentWeight = weight
+                        currentHeight = height
 
                         // Animate welcome text
                         tvWelcome.text = "Selamat datang, $name!"
                         animateTextChange(tvWelcome)
 
-                        // Animate BMI value
-                        animateBMIValue(bmi)
+                        // Set general tips
+                        setGeneralTip()
 
-                        val bmiStatus = getBMIStatus(bmi)
-                        tvBMIStatus.text = bmiStatus
-
-                        // Set color and background based on BMI status with animation
-                        setBMIStatusStyle(bmi, bmiStatus)
+                        // Calculate and display weight targets
+                        calculateAndDisplayWeightTarget(weight, height)
                     }
                 }
                 .addOnFailureListener { exception ->
                     // Handle error gracefully
                     if (isAdded) {
                         tvWelcome.text = "Selamat datang!"
-                        tvBMI.text = "0.0"
-                        tvBMIStatus.text = "Data tidak tersedia"
+                        setGeneralTip()
+                        setDefaultWeightTarget()
                     }
                 }
         }
     }
 
-    private fun setBMIStatusStyle(bmi: Double, status: String) {
-        context?.let { ctx ->
-            val (statusColor, backgroundColor) = when {
-                bmi < 18.5 -> Pair(
-                    R.color.status_underweight,
-                    R.drawable.status_underweight_background
-                )
+    private fun calculateAndDisplayWeightTarget(weight: Double, height: Double) {
+        if (weight > 0 && height > 0) {
+            // Calculate ideal weight range (BMI 18.5-24.9)
+            val heightInMeters = height / 100.0
+            val idealWeightMin = 18.5 * heightInMeters * heightInMeters
+            val idealWeightMax = 24.9 * heightInMeters * heightInMeters
+            val idealWeightTarget = (idealWeightMin + idealWeightMax) / 2
 
-                bmi < 25 -> Pair(R.color.status_normal, R.drawable.status_normal_background)
-                bmi < 30 -> Pair(R.color.status_overweight, R.drawable.status_overweight_background)
-                else -> Pair(R.color.status_obese, R.drawable.status_obese_background)
+            // Current weight
+            tvCurrentWeight.text = String.format("%.1f kg", weight)
+            animateWeightValue(tvCurrentWeight, 0.0, weight)
+
+            // Target weight - set to ideal weight
+            tvTargetWeight.text = String.format("%.1f kg", idealWeightTarget)
+            animateWeightValue(tvTargetWeight, 0.0, idealWeightTarget)
+
+            // Weight difference
+            val weightDifference = weight - idealWeightTarget
+            val weightToLoseText = when {
+                weightDifference > 1 -> {
+                    "Turun ${String.format("%.1f", weightDifference)} kg"
+                }
+                weightDifference < -1 -> {
+                    "Naik ${String.format("%.1f", Math.abs(weightDifference))} kg"
+                }
+                else -> {
+                    "Pertahankan berat badan"
+                }
             }
 
-            tvBMIStatus.setTextColor(ContextCompat.getColor(ctx, statusColor))
-            tvBMIStatus.setBackgroundResource(backgroundColor)
+            tvWeightToLose.text = weightToLoseText
+            animateTextChange(tvWeightToLose)
 
-            // Add subtle animation to status change
-            animateTextChange(tvBMIStatus)
+            // Set color based on weight goal
+            context?.let { ctx ->
+                val textColor = when {
+                    weightDifference > 5 -> R.color.status_obese // Need significant weight loss
+                    weightDifference > 0 -> R.color.status_overweight // Need some weight loss
+                    weightDifference < -2 -> R.color.status_underweight // Need weight gain
+                    else -> R.color.status_normal // Maintain weight
+                }
+                tvWeightToLose.setTextColor(ContextCompat.getColor(ctx, textColor))
+            }
         }
     }
 
-    private fun animateBMIValue(targetBMI: Double) {
-        val animator = ObjectAnimator.ofFloat(0f, targetBMI.toFloat())
-        animator.duration = 1500
+    private fun setDefaultWeightTarget() {
+        tvCurrentWeight.text = "-- kg"
+        tvTargetWeight.text = "-- kg"
+        tvWeightToLose.text = "Data tidak tersedia"
+    }
+
+    private fun animateWeightValue(textView: TextView, startValue: Double, targetValue: Double) {
+        val animator = ObjectAnimator.ofFloat(startValue.toFloat(), targetValue.toFloat())
+        animator.duration = 1200
         animator.interpolator = DecelerateInterpolator()
 
         animator.addUpdateListener { animation ->
             val animatedValue = animation.animatedValue as Float
-            tvBMI.text = String.format("%.1f", animatedValue)
+            textView.text = String.format("%.1f kg", animatedValue)
         }
 
+        // Add small delay to stagger animations
+        animator.startDelay = 200
         animator.start()
     }
 
@@ -129,9 +166,10 @@ class HomeFragment : Fragment() {
 
     private fun animateCards(view: View) {
         val cards = listOf<View>(
-            view.findViewById(R.id.bmi_card),
             view.findViewById(R.id.tip_card),
-            view.findViewById(R.id.stats_card)
+            view.findViewById(R.id.stats_card),
+            view.findViewById(R.id.weight_target_card),
+            view.findViewById(R.id.quick_actions_card)
         )
 
         cards.forEachIndexed { index, card ->
@@ -150,33 +188,23 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun getBMIStatus(bmi: Double): String {
-        return when {
-            bmi < 18.5 -> "Kurus"
-            bmi < 25 -> "Normal"
-            bmi < 30 -> "Kelebihan Berat Badan"
-            else -> "Obesitas"
-        }
-    }
-
-    private fun setDailyTip() {
-        val healthyTips = listOf(
+    // General tips for healthy living
+    private fun setGeneralTip() {
+        val generalTips = listOf(
             "💧 Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuh",
             "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari",
             "🏃‍♂️ Olahraga ringan 30 menit setiap hari dapat meningkatkan metabolisme",
-            "🚫 Hindari makanan berlemak tinggi dan makanan olahan",
-            "🍽️ Makan dalam porsi kecil tapi sering untuk menjaga metabolisme",
             "😴 Tidur yang cukup 7-8 jam per hari untuk pemulihan optimal",
             "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stress",
-            "📱 Batasi waktu screen time terutama sebelum tidur",
-            "🚶‍♀️ Jalan kaki minimal 10.000 langkah per hari",
-            "🥛 Konsumsi protein berkualitas tinggi untuk menjaga massa otot"
+            "🍽️ Makan dengan porsi kecil tapi sering untuk menjaga metabolisme",
+            "🚶‍♀️ Jalan kaki setelah makan dapat membantu pencernaan",
+            "🥜 Konsumsi protein sehat seperti kacang-kacangan dan ikan",
+            "🍌 Buah-buahan segar lebih baik dari jus buah kemasan",
+            "⏰ Buat jadwal makan yang teratur setiap hari"
         )
 
-        val randomTip = healthyTips.random()
+        val randomTip = generalTips.random()
         tvDailyTip.text = randomTip
-
-        // Add typewriter animation effect
         animateTypewriter(tvDailyTip, randomTip)
     }
 
@@ -205,7 +233,6 @@ class HomeFragment : Fragment() {
         super.onResume()
         // Refresh data when fragment becomes visible
         loadUserData()
-        setDailyTip()
     }
 
     override fun onDestroyView() {
@@ -214,27 +241,13 @@ class HomeFragment : Fragment() {
         tvDailyTip.handler?.removeCallbacksAndMessages(null)
     }
 
-    // Helper function to add pulse animation to important elements
-    private fun addPulseAnimation(view: View) {
-        val pulseAnimator = ObjectAnimator.ofFloat(view, "scaleX", 1.0f, 1.05f, 1.0f)
-        val pulseAnimatorY = ObjectAnimator.ofFloat(view, "scaleY", 1.0f, 1.05f, 1.0f)
-
-        pulseAnimator.duration = 1000
-        pulseAnimatorY.duration = 1000
-        pulseAnimator.repeatCount = ObjectAnimator.INFINITE
-        pulseAnimatorY.repeatCount = ObjectAnimator.INFINITE
-
-        pulseAnimator.start()
-        pulseAnimatorY.start()
-    }
-
     // Method to refresh daily tip with smooth transition
     fun refreshDailyTip() {
         tvDailyTip.animate()
             .alpha(0f)
             .setDuration(300)
             .withEndAction {
-                setDailyTip()
+                setGeneralTip()
                 tvDailyTip.animate()
                     .alpha(1f)
                     .setDuration(300)
