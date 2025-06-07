@@ -2,7 +2,6 @@ package com.farhan.aplikasidietuntukobesitas
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -12,8 +11,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.AnimationUtils
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.TextView
@@ -310,35 +307,135 @@ class ProfileFragment : Fragment() {
 
     /**
      * Opens WhatsApp to chat with Customer Service
+     * Fixed version with better app detection
      */
     private fun openWhatsAppCS() {
+        val message = "Halo, saya ingin bertanya mengenai aplikasi diet."
+        val encodedMessage = Uri.encode(message)
+
         try {
-            // Prepare WhatsApp message
-            val message = "Halo, saya ingin bertanya mengenai aplikasi diet."
-            val encodedMessage = Uri.encode(message)
-
-            // Create WhatsApp intent with phone number and message
-            val whatsappIntent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("https://api.whatsapp.com/send?phone=$whatsappCSNumber&text=$encodedMessage")
+            // Method 1: Try direct WhatsApp intent (most reliable)
+            val whatsappIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                setPackage("com.whatsapp")
+                putExtra(Intent.EXTRA_TEXT, message)
             }
 
-            // Check if WhatsApp is installed
             val packageManager = requireContext().packageManager
-            if (whatsappIntent.resolveActivity(packageManager) != null) {
-                startActivity(whatsappIntent)
-                showToast("Membuka WhatsApp CS...")
-            } else {
-                // If WhatsApp is not installed, open in browser
-                val browserIntent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://web.whatsapp.com/send?phone=$whatsappCSNumber&text=$encodedMessage")
-                }
-                startActivity(browserIntent)
-                showToast("Membuka WhatsApp Web...")
+
+            // Check if WhatsApp is installed using package manager
+            val isWhatsAppInstalled = try {
+                packageManager.getPackageInfo("com.whatsapp", 0)
+                true
+            } catch (e: Exception) {
+                false
             }
+
+            val isWhatsAppBusinessInstalled = try {
+                packageManager.getPackageInfo("com.whatsapp.w4b", 0)
+                true
+            } catch (e: Exception) {
+                false
+            }
+
+            Log.d(TAG, "WhatsApp installed: $isWhatsAppInstalled")
+            Log.d(TAG, "WhatsApp Business installed: $isWhatsAppBusinessInstalled")
+
+            when {
+                isWhatsAppInstalled -> {
+                    // Try the send intent first (more reliable)
+                    try {
+                        startActivity(whatsappIntent)
+                        showToast("Membuka WhatsApp...")
+                    } catch (e: Exception) {
+                        // Fallback to URL method
+                        Log.d(TAG, "Send intent failed, trying URL method")
+                        val urlIntent = Intent(Intent.ACTION_VIEW).apply {
+                            data = Uri.parse("https://wa.me/$whatsappCSNumber?text=$encodedMessage")
+                        }
+                        startActivity(urlIntent)
+                        showToast("Membuka WhatsApp...")
+                    }
+                }
+                isWhatsAppBusinessInstalled -> {
+                    val whatsappBusinessIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        setPackage("com.whatsapp.w4b")
+                        putExtra(Intent.EXTRA_TEXT, message)
+                    }
+                    try {
+                        startActivity(whatsappBusinessIntent)
+                        showToast("Membuka WhatsApp Business...")
+                    } catch (e: Exception) {
+                        // Fallback to URL method
+                        val urlIntent = Intent(Intent.ACTION_VIEW).apply {
+                            data = Uri.parse("https://wa.me/$whatsappCSNumber?text=$encodedMessage")
+                        }
+                        startActivity(urlIntent)
+                        showToast("Membuka WhatsApp Business...")
+                    }
+                }
+                else -> {
+                    // Neither installed - show dialog
+                    showWhatsAppNotInstalledDialog(message) // Pass the message here
+                }
+            }
+
         } catch (e: Exception) {
             Log.e(TAG, "Error opening WhatsApp: ", e)
-            showToast("Gagal membuka WhatsApp. Silakan coba lagi.")
+
+            // Final fallback - try web version
+            try {
+                val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://wa.me/$whatsappCSNumber?text=${Uri.encode(message)}")
+                }
+                startActivity(webIntent)
+                showToast("Membuka WhatsApp Web...")
+            } catch (webException: Exception) {
+                Log.e(TAG, "All methods failed: ", webException)
+                showToast("Gagal membuka WhatsApp. Silakan coba lagi.")
+            }
         }
+    }
+
+    /**
+     * Shows dialog when WhatsApp is not installed
+     */
+    private fun showWhatsAppNotInstalledDialog(message: String) {
+        val alertDialog = android.app.AlertDialog.Builder(requireContext())
+            .setTitle("WhatsApp Tidak Ditemukan")
+            .setMessage("WhatsApp tidak terinstall di perangkat Anda. Silakan install WhatsApp terlebih dahulu atau hubungi CS melalui:")
+            .setPositiveButton("Install WhatsApp") { _, _ ->
+                // Open Play Store to install WhatsApp
+                try {
+                    val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("market://details?id=com.whatsapp")
+                    }
+                    startActivity(playStoreIntent)
+                } catch (e: Exception) {
+                    // If Play Store is not available, open browser
+                    val browserIntent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://play.google.com/store/apps/details?id=com.whatsapp")
+                    }
+                    startActivity(browserIntent)
+                }
+            }
+            .setNegativeButton("Hubungi via Telepon") { _, _ ->
+                // Option to call CS directly
+                try {
+                    val callIntent = Intent(Intent.ACTION_DIAL).apply {
+                        data = Uri.parse("tel:$whatsappCSNumber")
+                    }
+                    startActivity(callIntent)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error opening dialer: ", e)
+                    showToast("Gagal membuka aplikasi telepon")
+                }
+            }
+            .setNeutralButton("Batal", null)
+            .create()
+
+        alertDialog.show()
     }
 
     private fun animateButtonPress(view: View, action: () -> Unit) {

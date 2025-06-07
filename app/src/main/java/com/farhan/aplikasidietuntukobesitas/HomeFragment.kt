@@ -168,8 +168,7 @@ class HomeFragment : Fragment() {
         val cards = listOf<View>(
             view.findViewById(R.id.tip_card),
             view.findViewById(R.id.stats_card),
-            view.findViewById(R.id.weight_target_card),
-            view.findViewById(R.id.quick_actions_card)
+            view.findViewById(R.id.weight_target_card)
         )
 
         cards.forEachIndexed { index, card ->
@@ -191,22 +190,23 @@ class HomeFragment : Fragment() {
     // General tips for healthy living
     private fun setGeneralTip() {
         val generalTips = listOf(
-            "💧 Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuh",
-            "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari",
-            "🏃‍♂️ Olahraga ringan 30 menit setiap hari dapat meningkatkan metabolisme",
-            "😴 Tidur yang cukup 7-8 jam per hari untuk pemulihan optimal",
-            "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stress",
-            "🍽️ Makan dengan porsi kecil tapi sering untuk menjaga metabolisme",
-            "🚶‍♀️ Jalan kaki setelah makan dapat membantu pencernaan",
-            "🥜 Konsumsi protein sehat seperti kacang-kacangan dan ikan",
-            "🍌 Buah-buahan segar lebih baik dari jus buah kemasan",
-            "⏰ Buat jadwal makan yang teratur setiap hari"
+            "💧 Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuh. Air sangat penting untuk fungsi tubuh yang optimal, termasuk pencernaan, penyerapan nutrisi, dan pengaturan suhu tubuh. Cobalah untuk selalu membawa botol air kemanapun Anda pergi agar mudah mengingat untuk tetap terhidrasi.",
+            "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari. Makanan dengan berbagai warna mengandung berbagai macam vitamin dan mineral yang baik untuk kesehatan tubuh Anda. Buah dan sayuran yang kaya serat juga dapat membantu menjaga pencernaan yang sehat dan mengurangi risiko penyakit.",
+            "🏃‍♂️ Olahraga ringan selama 30 menit setiap hari dapat meningkatkan metabolisme dan membantu tubuh membakar kalori lebih efektif. Cobalah untuk berjalan cepat, bersepeda, atau mengikuti kelas yoga untuk menjaga kebugaran tubuh Anda tanpa merasa kelelahan.",
+            "😴 Tidur yang cukup antara 7-8 jam per hari sangat penting untuk pemulihan tubuh yang optimal. Tidur yang berkualitas dapat meningkatkan daya tahan tubuh, memperbaiki mood, dan meningkatkan konsentrasi serta produktivitas pada keesokan harinya.",
+            "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stres. Stres yang berlebihan dapat memengaruhi kesehatan fisik dan mental Anda. Cobalah meditasi, pernapasan dalam, atau sekedar beristirahat di alam terbuka untuk menenangkan pikiran dan meredakan ketegangan.",
+            "🍽️ Makan dengan porsi kecil tapi sering dapat membantu menjaga metabolisme tubuh tetap aktif. Alih-alih makan dalam porsi besar dalam sekali makan, cobalah untuk makan 4-6 kali sehari dengan porsi yang lebih kecil untuk menjaga energi tubuh tetap stabil sepanjang hari.",
+            "🚶‍♀️ Jalan kaki setelah makan dapat membantu proses pencernaan dan mencegah perut kembung. Cobalah berjalan kaki selama 10-15 menit setelah makan untuk membantu tubuh mencerna makanan dengan lebih baik.",
+            "🥜 Konsumsi protein sehat seperti kacang-kacangan, ikan, dan sumber protein nabati lainnya. Protein sangat penting untuk pembentukan otot, memperbaiki jaringan tubuh, dan meningkatkan metabolisme. Ikan seperti salmon dan tuna kaya akan asam lemak omega-3 yang bermanfaat bagi kesehatan jantung.",
+            "🍌 Buah-buahan segar lebih baik dari jus buah kemasan. Buah segar mengandung serat alami yang membantu pencernaan dan memberi rasa kenyang lebih lama. Jus buah kemasan seringkali mengandung tambahan gula yang dapat meningkatkan kadar kalori secara signifikan.",
+            "⏰ Buat jadwal makan yang teratur setiap hari untuk membantu tubuh mengatur pola makan dan pencernaan. Dengan jadwal makan yang teratur, tubuh akan lebih mudah mencerna makanan dan menjaga keseimbangan energi sepanjang hari."
         )
 
         val randomTip = generalTips.random()
         tvDailyTip.text = randomTip
         animateTypewriter(tvDailyTip, randomTip)
     }
+
 
     private fun animateTypewriter(textView: TextView, fullText: String) {
         textView.text = ""

@@ -2,6 +2,29 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permission untuk akses internet (jika belum ada) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+<!--    &lt;!&ndash; Permission untuk telepon (untuk fitur call CS) &ndash;&gt;-->
+<!--    <uses-permission android:name="android.permission.CALL_PHONE" />-->
+
+    <!-- Queries untuk mendeteksi WhatsApp (Android 11+) -->
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -91,5 +91,27 @@
     <color name="success_primary">#00B894</color>
     <color name="error_primary">#E17055</color>
 
+    <!-- Primary Colors for Dark Mode -->
+    <color name="primary_dark_mode">#BB86FC</color>
+    <color name="accent_dark_mode">#03DAC6</color>
+
+    <!-- Background Colors -->
+    <color name="surface_dark">#1E1E1E</color>
+    <color name="surface_card_dark">#2C2C2C</color>
+    <color name="surface_variant_dark">#3A3A3A</color>
+
+    <!-- Text Colors -->
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#B3B3B3</color>
+    <color name="text_on_primary_dark">#000000</color>
+    <color name="text_on_accent_dark">#000000</color>
+
+    <!-- Navigation Colors -->
+    <color name="nav_selected_dark">#BB86FC</color>
+    <color name="nav_unselected_dark">#757575</color>
+
+    <!-- Utility Colors -->
+    <color name="divider_dark">#3A3A3A</color>
+
 </resources>
 
