@@ -83,6 +83,7 @@ class HomeFragment : Fragment() {
                     }
                 }
                 .addOnFailureListener { exception ->
+                    Log.e("HomeFragment", "Error loading user data", exception)
                     // Handle error gracefully
                     if (isAdded) {
                         tvWelcome.text = "Selamat datang!"
@@ -103,10 +104,10 @@ class HomeFragment : Fragment() {
         tipsListener = db.collection("daily_tips")
             .whereEqualTo("isActive", true)
             .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(10) // Get latest 10 tips
+            .limit(15) // Get latest 15 active tips
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
-                    Log.e("HomeFragment", "Error listening to tips", e)
+                    Log.e("HomeFragment", "Error listening to tips: ${e.message}", e)
                     if (isAdded) {
                         setFallbackTip()
                     }
@@ -117,31 +118,41 @@ class HomeFragment : Fragment() {
 
                 val firebaseTips = mutableListOf<String>()
 
-                snapshots?.forEach { document ->
-                    val tipText = document.getString("text")
-                    val createdBy = document.getString("createdByName") ?: "Pelatih"
+                snapshots?.documents?.forEach { document ->
+                    try {
+                        val tipText = document.getString("text")
+                        val createdBy = document.getString("createdByName") ?: "Pelatih"
+                        val isActive = document.getBoolean("isActive") ?: false
 
-                    tipText?.let {
-                        // Add creator info to tip
-                        val formattedTip = "💡 $it\n\n- $createdBy"
-                        firebaseTips.add(formattedTip)
+                        if (tipText != null && tipText.isNotBlank() && isActive) {
+                            // Format tip dengan informasi pembuat
+                            val formattedTip = "💡 $tipText\n\n- $createdBy"
+                            firebaseTips.add(formattedTip)
+                            Log.d("HomeFragment", "Added tip: ${tipText.take(30)}...")
+                        }
+                    } catch (ex: Exception) {
+                        Log.w("HomeFragment", "Error parsing tip document: ${ex.message}")
                     }
                 }
 
                 if (firebaseTips.isNotEmpty()) {
-                    Log.d("HomeFragment", "Received ${firebaseTips.size} tips from Firebase (real-time)")
+                    Log.d("HomeFragment", "Successfully loaded ${firebaseTips.size} tips from Firebase")
+                    // Pilih tip secara random dari tips yang aktif
                     val randomTip = firebaseTips.random()
                     updateTipWithAnimation(randomTip)
                 } else {
-                    Log.d("HomeFragment", "No active tips found in Firebase, using fallback")
+                    Log.d("HomeFragment", "No active tips found, using fallback")
                     setFallbackTip()
                 }
             }
     }
 
     private fun updateTipWithAnimation(newTip: String) {
-        // Fade out current tip, then fade in new tip
+        // Cek apakah tip berbeda untuk menghindari animasi yang tidak perlu
         if (tvDailyTip.text.toString() != newTip) {
+            Log.d("HomeFragment", "Updating tip with animation")
+
+            // Fade out current tip, then fade in new tip
             tvDailyTip.animate()
                 .alpha(0f)
                 .setDuration(300)
@@ -165,10 +176,12 @@ class HomeFragment : Fragment() {
         Log.d("HomeFragment", "Using fallback tips")
         val fallbackTips = listOf(
             "💧 Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuh.",
-            "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari.",
-            "🏃‍♂️ Olahraga ringan selama 30 menit setiap hari.",
-            "😴 Tidur yang cukup antara 7-8 jam per hari sangat penting untuk pemulihan tubuh.",
-            "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stres."
+            "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari untuk nutrisi yang seimbang.",
+            "🏃‍♂️ Lakukan olahraga ringan selama 30 menit setiap hari untuk menjaga kebugaran.",
+            "😴 Tidur cukup 7-8 jam per hari untuk pemulihan tubuh yang optimal.",
+            "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stres dalam kehidupan harian.",
+            "🚶‍♀️ Berjalan kaki minimal 10.000 langkah setiap hari untuk kesehatan jantung.",
+            "🍎 Pilih makanan segar daripada makanan olahan untuk nutrisi terbaik."
         )
 
         val randomTip = fallbackTips.random() + "\n\n- Tips Default"
@@ -279,35 +292,17 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun animateTypewriter(textView: TextView, fullText: String) {
-        textView.text = ""
-        var currentIndex = 0
-
-        val handler = android.os.Handler(android.os.Looper.getMainLooper())
-        val runnable = object : Runnable {
-            override fun run() {
-                if (currentIndex <= fullText.length && isAdded) {
-                    textView.text = fullText.substring(0, currentIndex)
-                    currentIndex++
-                    if (currentIndex <= fullText.length) {
-                        handler.postDelayed(this, 30) // Adjust speed here
-                    }
-                }
-            }
-        }
-
-        // Start animation after a small delay
-        handler.postDelayed(runnable, 500)
-    }
-
     override fun onResume() {
         super.onResume()
+        Log.d("HomeFragment", "Fragment resumed, refreshing data...")
         // Refresh data when fragment becomes visible
         loadUserData()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        Log.d("HomeFragment", "Fragment destroyed, cleaning up...")
+
         // Clean up any running animations or handlers
         tvDailyTip.handler?.removeCallbacksAndMessages(null)
 
@@ -318,8 +313,7 @@ class HomeFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        // Optional: Remove listener when fragment is not visible to save resources
-        // Uncomment if you want to save battery/data usage
-        // tipsListener?.remove()
+        Log.d("HomeFragment", "Fragment paused")
+        // Listener tetap aktif saat pause untuk menjaga sinkronisasi real-time
     }
 }

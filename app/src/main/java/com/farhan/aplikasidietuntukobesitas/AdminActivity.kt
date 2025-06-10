@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -68,7 +67,13 @@ class AdminActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         recyclerView = findViewById(R.id.rv_users)
-        userAdapter = UserAdapter(userList)
+
+        // Pass callback to refresh statistics when user is deleted
+        userAdapter = UserAdapter(userList) {
+            // Refresh statistics when a user is deleted
+            updateStatisticsFromCurrentList()
+        }
+
         recyclerView.apply {
             layoutManager = LinearLayoutManager(this@AdminActivity)
             adapter = userAdapter
@@ -232,6 +237,23 @@ class AdminActivity : AppCompatActivity() {
         tvAvgBmi.text = String.format("%.1f", avgBmi)
     }
 
+    // New method to update statistics from current list (used after deletion)
+    private fun updateStatisticsFromCurrentList() {
+        var userCount = userList.size
+        var totalBmi = 0.0
+        var bmiCount = 0
+
+        userList.forEach { user ->
+            if (user.bmi > 0) {
+                totalBmi += user.bmi
+                bmiCount++
+            }
+        }
+
+        updateStatistics(userCount, bmiCount, totalBmi)
+        updateLastUpdatedTime()
+    }
+
     private fun updateLastUpdatedTime() {
         val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         tvLastUpdated.text = "Updated at $currentTime"
@@ -311,6 +333,7 @@ class AdminActivity : AppCompatActivity() {
 
     private fun loadAllUsersForDebug() {
         Log.d("AdminActivity", "Loading all users for debugging...")
+
         db.collection("users")
             .get()
             .addOnSuccessListener { querySnapshot ->
@@ -321,19 +344,6 @@ class AdminActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 Log.e("AdminActivity", "Error loading all users for debug", e)
-                // Try with snapshot listener as last resort
-                db.collection("users")
-                    .addSnapshotListener { snapshot, err ->
-                        if (err != null) {
-                            Log.e("AdminActivity", "Error loading all users with listener", err)
-                            return@addSnapshotListener
-                        }
-
-                        Log.d("AdminActivity", "All users count: ${snapshot?.size() ?: 0}")
-                        snapshot?.documents?.forEach { document ->
-                            Log.d("AdminActivity", "All users - ID: ${document.id}, Role: ${document.getString("role")}, Email: ${document.getString("email")}")
-                        }
-                    }
             }
     }
 
@@ -344,11 +354,27 @@ class AdminActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_refresh -> {
+                Toast.makeText(this, "Memuat ulang data...", Toast.LENGTH_SHORT).show()
+                verifyAdminRoleAndLoadData()
+                true
+            }
             R.id.action_logout -> {
                 performLogout()
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh data when returning to this activity
+        verifyAdminRoleAndLoadData()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Clean up any listeners if needed
     }
 }

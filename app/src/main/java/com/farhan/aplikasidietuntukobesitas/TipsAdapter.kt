@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
@@ -39,27 +40,46 @@ class TipsAdapter(
             tvTipText.text = tip.text
             tvCreatedBy.text = "Oleh: ${tip.createdByName}"
 
+            // Format tanggal dengan locale Indonesia
             val dateFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
             tvCreatedAt.text = dateFormat.format(tip.createdAt)
 
-            // Status
+            // Status dengan penanganan resource yang lebih baik
             if (tip.isActive) {
                 tvStatus.text = "Aktif"
-                tvStatus.setBackgroundResource(R.drawable.status_active_bg)
-                // Fallback jika resource color tidak ada
+
+                // Set background dengan fallback
                 try {
-                    tvStatus.setTextColor(itemView.context.getColor(R.color.status_active))
+                    tvStatus.setBackgroundResource(R.drawable.status_active_bg)
                 } catch (e: Exception) {
-                    tvStatus.setTextColor(itemView.context.resources.getColor(android.R.color.holo_green_dark))
+                    // Fallback background untuk status aktif
+                    tvStatus.setBackgroundColor(ContextCompat.getColor(itemView.context, android.R.color.holo_green_light))
+                    tvStatus.setPadding(8, 4, 8, 4)
+                }
+
+                // Set text color dengan fallback
+                try {
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, R.color.status_active))
+                } catch (e: Exception) {
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.holo_green_dark))
                 }
             } else {
                 tvStatus.text = "Nonaktif"
-                tvStatus.setBackgroundResource(R.drawable.status_inactive_bg)
-                // Fallback jika resource color tidak ada
+
+                // Set background dengan fallback
                 try {
-                    tvStatus.setTextColor(itemView.context.getColor(R.color.status_inactive))
+                    tvStatus.setBackgroundResource(R.drawable.status_inactive_bg)
                 } catch (e: Exception) {
-                    tvStatus.setTextColor(itemView.context.resources.getColor(android.R.color.darker_gray))
+                    // Fallback background untuk status nonaktif
+                    tvStatus.setBackgroundColor(ContextCompat.getColor(itemView.context, android.R.color.darker_gray))
+                    tvStatus.setPadding(8, 4, 8, 4)
+                }
+
+                // Set text color dengan fallback
+                try {
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, R.color.status_inactive))
+                } catch (e: Exception) {
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 }
             }
 
@@ -72,11 +92,16 @@ class TipsAdapter(
                 onItemAction(tip, "delete")
             }
 
-            // Disable buttons if tip is inactive
-            btnEdit.isEnabled = tip.isActive
-            btnDelete.isEnabled = tip.isActive
-            btnEdit.alpha = if (tip.isActive) 1.0f else 0.5f
-            btnDelete.alpha = if (tip.isActive) 1.0f else 0.5f
+            // Button state berdasarkan status tip
+            val isEnabled = tip.isActive
+            btnEdit.isEnabled = isEnabled
+            btnDelete.isEnabled = isEnabled
+            btnEdit.alpha = if (isEnabled) 1.0f else 0.5f
+            btnDelete.alpha = if (isEnabled) 1.0f else 0.5f
+
+            // Set content description untuk accessibility
+            btnEdit.contentDescription = if (isEnabled) "Edit tip" else "Tip nonaktif, tidak dapat diedit"
+            btnDelete.contentDescription = if (isEnabled) "Hapus tip" else "Tip nonaktif, tidak dapat dihapus"
         }
     }
 }

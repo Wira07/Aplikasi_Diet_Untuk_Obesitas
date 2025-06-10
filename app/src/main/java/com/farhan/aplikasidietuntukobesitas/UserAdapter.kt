@@ -1,14 +1,23 @@
 package com.farhan.aplikasidietuntukobesitas
 
+import android.app.AlertDialog
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.firestore.FirebaseFirestore
 
-class UserAdapter(private val userList: List<User>) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
+class UserAdapter(
+    private val userList: MutableList<User>,
+    private val onUserDeleted: () -> Unit = {}
+) : RecyclerView.Adapter<UserAdapter.UserViewHolder>() {
+
+    private val db = FirebaseFirestore.getInstance()
 
     class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvName: TextView = itemView.findViewById(R.id.tv_name)
@@ -19,6 +28,7 @@ class UserAdapter(private val userList: List<User>) : RecyclerView.Adapter<UserA
         val tvGender: TextView = itemView.findViewById(R.id.tv_gender)
         val tvBmi: TextView = itemView.findViewById(R.id.tv_bmi)
         val tvBmiStatus: TextView = itemView.findViewById(R.id.tv_bmi_status)
+        val btnDelete: Button = itemView.findViewById(R.id.btn_delete)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
@@ -71,6 +81,48 @@ class UserAdapter(private val userList: List<User>) : RecyclerView.Adapter<UserA
         // Add padding to status
         val padding = (8 * holder.itemView.context.resources.displayMetrics.density).toInt()
         holder.tvBmiStatus.setPadding(padding, padding/2, padding, padding/2)
+
+        // Set delete button click listener
+        holder.btnDelete.setOnClickListener {
+            showDeleteConfirmation(holder.itemView.context, user, position)
+        }
+    }
+
+    private fun showDeleteConfirmation(context: android.content.Context, user: User, position: Int) {
+        AlertDialog.Builder(context)
+            .setTitle("Hapus Pengguna")
+            .setMessage("Apakah Anda yakin ingin menghapus pengguna ${user.name}? \n\nTindakan ini tidak dapat dibatalkan.")
+            .setPositiveButton("Hapus") { _, _ ->
+                deleteUser(context, user, position)
+            }
+            .setNegativeButton("Batal", null)
+            .setIcon(android.R.drawable.ic_dialog_alert)
+            .show()
+    }
+
+    private fun deleteUser(context: android.content.Context, user: User, position: Int) {
+        // Show loading message
+        Toast.makeText(context, "Menghapus pengguna...", Toast.LENGTH_SHORT).show()
+
+        // Delete from Firestore
+        db.collection("users").document(user.id)
+            .delete()
+            .addOnSuccessListener {
+                // Remove from local list
+                userList.removeAt(position)
+                notifyItemRemoved(position)
+                notifyItemRangeChanged(position, userList.size)
+
+                // Show success message
+                Toast.makeText(context, "Pengguna ${user.name} berhasil dihapus", Toast.LENGTH_SHORT).show()
+
+                // Notify parent activity to refresh statistics
+                onUserDeleted()
+            }
+            .addOnFailureListener { e ->
+                // Show error message
+                Toast.makeText(context, "Gagal menghapus pengguna: ${e.message}", Toast.LENGTH_LONG).show()
+            }
     }
 
     override fun getItemCount(): Int = userList.size
