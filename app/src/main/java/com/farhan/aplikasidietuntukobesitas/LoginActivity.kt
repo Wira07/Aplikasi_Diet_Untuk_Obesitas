@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.farhan.aplikasidietuntukobesitas.AdminActivity
 import com.farhan.aplikasidietuntukobesitas.MainActivity
+import com.farhan.aplikasidietuntukobesitas.PelatihActivity
 import com.farhan.aplikasidietuntukobesitas.R
 import com.farhan.aplikasidietuntukobesitas.RegisterActivity
 import com.google.firebase.auth.FirebaseAuth
@@ -140,6 +141,11 @@ class LoginActivity : AppCompatActivity() {
                             Toast.makeText(this, "Selamat datang Admin!", Toast.LENGTH_SHORT).show()
                             redirectToAdmin()
                         }
+                        "pelatih" -> {
+                            Log.d("LoginActivity", "Redirecting to PelatihActivity")
+                            Toast.makeText(this, "Selamat datang Pelatih!", Toast.LENGTH_SHORT).show()
+                            redirectToPelatih()
+                        }
                         "user" -> {
                             Log.d("LoginActivity", "Redirecting to MainActivity")
                             Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
@@ -213,6 +219,14 @@ class LoginActivity : AppCompatActivity() {
 
     private fun redirectToAdmin() {
         val intent = Intent(this, AdminActivity::class.java)
+        // Clear activity stack agar tidak bisa kembali ke login dengan back button
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
+    }
+
+    private fun redirectToPelatih() {
+        val intent = Intent(this, PelatihActivity::class.java)
         // Clear activity stack agar tidak bisa kembali ke login dengan back button
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)

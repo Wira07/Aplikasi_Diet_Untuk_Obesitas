@@ -113,5 +113,8 @@
     <!-- Utility Colors -->
     <color name="divider_dark">#3A3A3A</color>
 
+    <color name="status_active">#4CAF50</color>
+    <color name="status_inactive">#F44336</color>
+
 </resources>
 
