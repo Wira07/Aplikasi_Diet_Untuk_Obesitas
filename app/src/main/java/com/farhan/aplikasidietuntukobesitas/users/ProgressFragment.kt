@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.users
 
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -13,6 +13,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
+import com.farhan.aplikasidietuntukobesitas.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 

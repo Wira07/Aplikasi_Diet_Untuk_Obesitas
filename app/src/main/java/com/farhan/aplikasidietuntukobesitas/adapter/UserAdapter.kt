@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.adapter
 
 import android.app.AlertDialog
 import android.graphics.Color
@@ -8,8 +8,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.farhan.aplikasidietuntukobesitas.R
+import com.farhan.aplikasidietuntukobesitas.data.User
 import com.google.firebase.firestore.FirebaseFirestore
 
 class UserAdapter(

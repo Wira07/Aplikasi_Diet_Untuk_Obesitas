@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.admin
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,6 +11,10 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.farhan.aplikasidietuntukobesitas.form.LoginActivity
+import com.farhan.aplikasidietuntukobesitas.R
+import com.farhan.aplikasidietuntukobesitas.data.User
+import com.farhan.aplikasidietuntukobesitas.adapter.UserAdapter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat

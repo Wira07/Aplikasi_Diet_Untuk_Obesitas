@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.data
 
 data class User(
     val id: String = "",

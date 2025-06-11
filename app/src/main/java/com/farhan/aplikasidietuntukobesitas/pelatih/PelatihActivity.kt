@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.pelatih
 
 import android.content.Intent
 import android.os.Bundle
@@ -10,11 +10,13 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.farhan.aplikasidietuntukobesitas.form.LoginActivity
+import com.farhan.aplikasidietuntukobesitas.R
+import com.farhan.aplikasidietuntukobesitas.adapter.TipsAdapter
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
-import java.text.SimpleDateFormat
 import java.util.*
 
 class PelatihActivity : AppCompatActivity() {
@@ -95,6 +97,7 @@ class PelatihActivity : AppCompatActivity() {
     }
 
     private fun loadTips() {
+        // PERBAIKAN: Load semua tips (active dan inactive) untuk panel pelatih
         db.collection("daily_tips")
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshots, e ->
@@ -105,6 +108,7 @@ class PelatihActivity : AppCompatActivity() {
 
                 tipsList.clear()
                 var activeTipsCount = 0
+                var totalTipsCount = 0
 
                 snapshots?.forEach { document ->
                     val tip = TipData(
@@ -115,13 +119,18 @@ class PelatihActivity : AppCompatActivity() {
                         isActive = document.getBoolean("isActive") ?: true
                     )
                     tipsList.add(tip)
+                    totalTipsCount++
                     if (tip.isActive) activeTipsCount++
+
+                    Log.d("PelatihActivity", "Loaded tip: ${tip.text.take(30)}..., Active: ${tip.isActive}")
                 }
 
                 // Update UI
-                tvTotalTips.text = tipsList.size.toString()
+                tvTotalTips.text = totalTipsCount.toString()
                 tvActiveTips.text = activeTipsCount.toString()
                 tipsAdapter.notifyDataSetChanged()
+
+                Log.d("PelatihActivity", "Total tips: $totalTipsCount, Active tips: $activeTipsCount")
             }
     }
 
@@ -151,23 +160,27 @@ class PelatihActivity : AppCompatActivity() {
     private fun addTipToFirebase(tipText: String) {
         val currentUser = auth.currentUser
         currentUser?.let { user ->
+            // PERBAIKAN: Pastikan struktur data yang konsisten
             val tipData = hashMapOf(
                 "text" to tipText,
                 "createdBy" to user.uid,
                 "createdByName" to tvPelatihName.text.toString(),
                 "createdAt" to FieldValue.serverTimestamp(),
-                "isActive" to true
+                "isActive" to true  // Pastikan tips baru selalu aktif
             )
+
+            Log.d("PelatihActivity", "Adding tip to Firebase: $tipText")
+            Log.d("PelatihActivity", "Created by: ${tvPelatihName.text}")
 
             db.collection("daily_tips")
                 .add(tipData)
                 .addOnSuccessListener { documentReference ->
-                    Log.d("PelatihActivity", "Tip ditambahkan dengan ID: ${documentReference.id}")
-                    Toast.makeText(this, "Tips berhasil ditambahkan!", Toast.LENGTH_SHORT).show()
+                    Log.d("PelatihActivity", "Tip ditambahkan dengan sukses! ID: ${documentReference.id}")
+                    Toast.makeText(this, "Tips berhasil ditambahkan dan akan segera muncul di halaman user!", Toast.LENGTH_LONG).show()
                 }
                 .addOnFailureListener { e ->
                     Log.e("PelatihActivity", "Error menambahkan tip", e)
-                    Toast.makeText(this, "Error menambahkan tips: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Error menambahkan tips: ${e.message}", Toast.LENGTH_LONG).show()
                 }
         }
     }
@@ -196,9 +209,16 @@ class PelatihActivity : AppCompatActivity() {
     }
 
     private fun updateTip(tipId: String, newText: String) {
+        Log.d("PelatihActivity", "Updating tip with ID: $tipId")
+
         db.collection("daily_tips").document(tipId)
-            .update("text", newText, "updatedAt", FieldValue.serverTimestamp())
+            .update(
+                "text", newText,
+                "updatedAt", FieldValue.serverTimestamp(),
+                "isActive", true  // Pastikan tip yang diupdate tetap aktif
+            )
             .addOnSuccessListener {
+                Log.d("PelatihActivity", "Tip berhasil diupdate!")
                 Toast.makeText(this, "Tips berhasil diupdate!", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->
@@ -210,7 +230,7 @@ class PelatihActivity : AppCompatActivity() {
     private fun showDeleteConfirmation(tip: TipData) {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Hapus Tips")
-        builder.setMessage("Apakah Anda yakin ingin menghapus tips ini?\n\n\"${tip.text.take(50)}...\"")
+        builder.setMessage("Apakah Anda yakin ingin menghapus tips ini secara permanen?\n\n\"${tip.text.take(50)}...\"")
 
         builder.setPositiveButton("Ya") { _, _ ->
             deleteTip(tip.id)
@@ -221,9 +241,13 @@ class PelatihActivity : AppCompatActivity() {
     }
 
     private fun deleteTip(tipId: String) {
+        Log.d("PelatihActivity", "Deleting tip with ID: $tipId")
+
+        // Hapus dokumen secara permanen dari Firestore
         db.collection("daily_tips").document(tipId)
-            .update("isActive", false)
+            .delete()
             .addOnSuccessListener {
+                Log.d("PelatihActivity", "Tips berhasil dihapus permanen dengan ID: $tipId")
                 Toast.makeText(this, "Tips berhasil dihapus!", Toast.LENGTH_SHORT).show()
             }
             .addOnFailureListener { e ->

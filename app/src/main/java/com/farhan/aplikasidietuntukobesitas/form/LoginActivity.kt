@@ -1,5 +1,4 @@
-// LoginActivity.kt
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.form
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,11 +8,10 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.farhan.aplikasidietuntukobesitas.AdminActivity
-import com.farhan.aplikasidietuntukobesitas.MainActivity
-import com.farhan.aplikasidietuntukobesitas.PelatihActivity
+import com.farhan.aplikasidietuntukobesitas.navigasi.MainActivity
 import com.farhan.aplikasidietuntukobesitas.R
-import com.farhan.aplikasidietuntukobesitas.RegisterActivity
+import com.farhan.aplikasidietuntukobesitas.admin.AdminActivity
+import com.farhan.aplikasidietuntukobesitas.pelatih.PelatihActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -28,9 +26,18 @@ class LoginActivity : AppCompatActivity() {
 
     private var retryCount = 0
     private val maxRetries = 2
+    private var hasRedirected = false // Flag untuk mencegah redirect berulang
 
     companion object {
         const val EXTRA_DISABLE_AUTO_LOGIN = "disable_auto_login"
+
+        // Fungsi helper untuk logout yang benar
+        fun createLogoutIntent(context: android.content.Context): Intent {
+            val intent = Intent(context, LoginActivity::class.java)
+            intent.putExtra(EXTRA_DISABLE_AUTO_LOGIN, true)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            return intent
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,11 +53,28 @@ class LoginActivity : AppCompatActivity() {
         // Cek apakah auto login dinonaktifkan (misalnya setelah logout)
         val disableAutoLogin = intent.getBooleanExtra(EXTRA_DISABLE_AUTO_LOGIN, false)
 
-        if (!disableAutoLogin) {
+        if (!disableAutoLogin && !hasRedirected) {
             // Cek apakah user sudah login sebelumnya hanya jika auto login tidak dinonaktifkan
             checkAutoLogin()
         } else {
-            Log.d("LoginActivity", "Auto login disabled, showing login form")
+            Log.d("LoginActivity", "Auto login disabled or already redirected, showing login form")
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Hanya lakukan auto login jika belum pernah redirect dan auto login tidak dinonaktifkan
+        val disableAutoLogin = intent.getBooleanExtra(EXTRA_DISABLE_AUTO_LOGIN, false)
+
+        if (!disableAutoLogin && !hasRedirected) {
+            val currentUser = auth.currentUser
+            if (currentUser != null) {
+                Log.d("LoginActivity", "onStart: User still logged in: ${currentUser.uid}")
+                // Langsung redirect tanpa menampilkan Toast lagi
+                checkUserRoleAndRedirect(currentUser.uid, false)
+            }
+        } else {
+            Log.d("LoginActivity", "onStart: Auto login disabled or already redirected")
         }
     }
 
@@ -81,15 +105,14 @@ class LoginActivity : AppCompatActivity() {
 
     private fun checkAutoLogin() {
         val currentUser = auth.currentUser
-        if (currentUser != null) {
+        if (currentUser != null && !hasRedirected) {
             Log.d("LoginActivity", "User already logged in: ${currentUser.uid}")
             Log.d("LoginActivity", "User email: ${currentUser.email}")
 
-            // User sudah login, cek role dan redirect otomatis
-            Toast.makeText(this, "Auto login...", Toast.LENGTH_SHORT).show()
-            checkUserRole(currentUser.uid)
+            // User sudah login, cek role dan redirect otomatis tanpa toast
+            checkUserRoleAndRedirect(currentUser.uid, false)
         } else {
-            Log.d("LoginActivity", "No user logged in, showing login form")
+            Log.d("LoginActivity", "No user logged in or already redirected, showing login form")
             // Tampilkan form login jika belum login
         }
     }
@@ -109,7 +132,7 @@ class LoginActivity : AppCompatActivity() {
                     val user = auth.currentUser
                     user?.let {
                         Log.d("LoginActivity", "Login successful for user: ${it.uid}")
-                        checkUserRole(it.uid)
+                        checkUserRoleAndRedirect(it.uid, true)
                     }
                 } else {
                     Log.e("LoginActivity", "Login failed", task.exception)
@@ -119,7 +142,8 @@ class LoginActivity : AppCompatActivity() {
             }
     }
 
-    private fun checkUserRole(uid: String) {
+    // Fungsi baru yang menggabungkan checkUserRole dengan parameter untuk menampilkan toast
+    private fun checkUserRoleAndRedirect(uid: String, showToast: Boolean) {
         Log.d("LoginActivity", "Checking role for user: $uid")
 
         db.collection("users").document(uid)
@@ -138,29 +162,37 @@ class LoginActivity : AppCompatActivity() {
                     when (role.lowercase().trim()) {
                         "admin" -> {
                             Log.d("LoginActivity", "Redirecting to AdminActivity")
-                            Toast.makeText(this, "Selamat datang Admin!", Toast.LENGTH_SHORT).show()
+                            if (showToast) {
+                                Toast.makeText(this, "Selamat datang Admin!", Toast.LENGTH_SHORT).show()
+                            }
                             redirectToAdmin()
                         }
                         "pelatih" -> {
                             Log.d("LoginActivity", "Redirecting to PelatihActivity")
-                            Toast.makeText(this, "Selamat datang Pelatih!", Toast.LENGTH_SHORT).show()
+                            if (showToast) {
+                                Toast.makeText(this, "Selamat datang Pelatih!", Toast.LENGTH_SHORT).show()
+                            }
                             redirectToPelatih()
                         }
                         "user" -> {
                             Log.d("LoginActivity", "Redirecting to MainActivity")
-                            Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                            if (showToast) {
+                                Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                            }
                             redirectToUser()
                         }
                         else -> {
                             // Fallback untuk role yang tidak dikenali
                             Log.d("LoginActivity", "Unknown role: '$role', defaulting to user")
-                            Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                            if (showToast) {
+                                Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                            }
                             redirectToUser()
                         }
                     }
                 } else {
                     Log.w("LoginActivity", "Document doesn't exist, creating default user document")
-                    createUserDocument(uid)
+                    createUserDocument(uid, showToast)
                 }
             }
             .addOnFailureListener { e ->
@@ -170,19 +202,26 @@ class LoginActivity : AppCompatActivity() {
                 if (e.message?.contains("PERMISSION_DENIED") == true ||
                     e.message?.contains("Missing or insufficient permissions") == true) {
                     Log.w("LoginActivity", "Permission denied, creating user document with retry")
-                    createUserDocument(uid)
+                    createUserDocument(uid, showToast)
                 } else if (isNetworkError(e)) {
                     Log.w("LoginActivity", "Network error, retrying...")
-                    retryCheckUserRole(uid)
+                    retryCheckUserRole(uid, showToast)
                 } else {
-                    Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    if (showToast) {
+                        Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
                     // Fallback: redirect ke MainActivity jika gagal mengambil data
                     redirectToUser()
                 }
             }
     }
 
-    private fun createUserDocument(uid: String) {
+    // Fungsi lama untuk backward compatibility
+    private fun checkUserRole(uid: String) {
+        checkUserRoleAndRedirect(uid, true)
+    }
+
+    private fun createUserDocument(uid: String, showToast: Boolean = true) {
         val currentEmail = auth.currentUser?.email ?: ""
 
         // Buat dokumen user default jika tidak ada
@@ -197,7 +236,9 @@ class LoginActivity : AppCompatActivity() {
             .set(userMap)
             .addOnSuccessListener {
                 Log.d("LoginActivity", "User document created successfully")
-                Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                if (showToast) {
+                    Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                }
                 redirectToUser()
             }
             .addOnFailureListener { e ->
@@ -207,9 +248,13 @@ class LoginActivity : AppCompatActivity() {
                 if (e.message?.contains("PERMISSION_DENIED") == true ||
                     e.message?.contains("Missing or insufficient permissions") == true) {
                     Log.w("LoginActivity", "Permission denied for creating document, proceeding as regular user")
-                    Toast.makeText(this, "Login berhasil! (Mode terbatas)", Toast.LENGTH_SHORT).show()
+                    if (showToast) {
+                        Toast.makeText(this, "Login berhasil! (Mode terbatas)", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                    if (showToast) {
+                        Toast.makeText(this, "Login berhasil!", Toast.LENGTH_SHORT).show()
+                    }
                 }
 
                 // Tetap redirect ke MainActivity meskipun gagal buat dokumen
@@ -218,6 +263,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun redirectToAdmin() {
+        hasRedirected = true // Set flag sebelum redirect
         val intent = Intent(this, AdminActivity::class.java)
         // Clear activity stack agar tidak bisa kembali ke login dengan back button
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -226,6 +272,7 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun redirectToPelatih() {
+        hasRedirected = true // Set flag sebelum redirect
         val intent = Intent(this, PelatihActivity::class.java)
         // Clear activity stack agar tidak bisa kembali ke login dengan back button
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -234,20 +281,12 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun redirectToUser() {
+        hasRedirected = true // Set flag sebelum redirect
         val intent = Intent(this, MainActivity::class.java)
         // Clear activity stack agar tidak bisa kembali ke login dengan back button
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Cek lagi saat activity di-resume untuk memastikan auto login
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            Log.d("LoginActivity", "onStart: User still logged in: ${currentUser.uid}")
-        }
     }
 
     override fun onBackPressed() {
@@ -256,18 +295,18 @@ class LoginActivity : AppCompatActivity() {
         finishAffinity()
     }
 
-    private fun retryCheckUserRole(uid: String) {
+    private fun retryCheckUserRole(uid: String, showToast: Boolean = true) {
         if (retryCount < maxRetries) {
             retryCount++
             Log.d("LoginActivity", "Retrying checkUserRole, attempt: $retryCount")
 
-            // Tunggu sebentar sebelum retry
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                checkUserRole(uid)
-            }, 1000)
+            // Langsung retry tanpa delay
+            checkUserRoleAndRedirect(uid, showToast)
         } else {
             Log.w("LoginActivity", "Max retries reached, proceeding as regular user")
-            Toast.makeText(this, "Login berhasil! (Mode offline)", Toast.LENGTH_SHORT).show()
+            if (showToast) {
+                Toast.makeText(this, "Login berhasil! (Mode offline)", Toast.LENGTH_SHORT).show()
+            }
             redirectToUser()
         }
     }

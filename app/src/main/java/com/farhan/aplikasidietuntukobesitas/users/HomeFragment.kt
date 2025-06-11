@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.users
 
 import android.animation.ObjectAnimator
 import android.os.Bundle
@@ -10,6 +10,7 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.farhan.aplikasidietuntukobesitas.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -95,64 +96,163 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupTipsListener() {
-        Log.d("HomeFragment", "Setting up real-time tips listener...")
+        Log.d("HomeFragment", "========= STARTING TIPS LISTENER SETUP =========")
 
         // Remove any existing listener
         tipsListener?.remove()
 
-        // Setup new listener for real-time updates
+        // First, let's check if we can connect to Firestore
+        db.collection("daily_tips")
+            .get()
+            .addOnSuccessListener { documents ->
+                Log.d("HomeFragment", "✅ Successfully connected to Firestore")
+                Log.d("HomeFragment", "📊 Total documents in daily_tips collection: ${documents.size()}")
+
+                // Log all documents for debugging
+                documents.forEachIndexed { index, document ->
+                    val text = document.getString("text")
+                    val isActive = document.getBoolean("isActive")
+                    val createdBy = document.getString("createdBy")
+                    val createdByName = document.getString("createdByName")
+                    val createdAt = document.getDate("createdAt")
+
+                    Log.d("HomeFragment", "📝 Document $index:")
+                    Log.d("HomeFragment", "   - ID: ${document.id}")
+                    Log.d("HomeFragment", "   - Text: $text")
+                    Log.d("HomeFragment", "   - IsActive: $isActive")
+                    Log.d("HomeFragment", "   - CreatedBy: $createdBy")
+                    Log.d("HomeFragment", "   - CreatedByName: $createdByName")
+                    Log.d("HomeFragment", "   - CreatedAt: $createdAt")
+                }
+
+                // Now setup the real-time listener
+                setupRealTimeListener()
+            }
+            .addOnFailureListener { e ->
+                Log.e("HomeFragment", "❌ Failed to connect to Firestore", e)
+                setFallbackTip()
+            }
+    }
+
+    private fun setupRealTimeListener() {
+        Log.d("HomeFragment", "🔄 Setting up real-time listener...")
+
+        // Try different query approaches
         tipsListener = db.collection("daily_tips")
-            .whereEqualTo("isActive", true)
             .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(15) // Get latest 15 active tips
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
-                    Log.e("HomeFragment", "Error listening to tips: ${e.message}", e)
-                    if (isAdded) {
-                        setFallbackTip()
-                    }
+                    Log.e("HomeFragment", "❌ Error in snapshot listener: ${e.message}", e)
+
+                    // Try alternative approach without orderBy
+                    setupAlternativeListener()
+                    return@addSnapshotListener
+                }
+
+                if (!isAdded) {
+                    Log.w("HomeFragment", "⚠️ Fragment not added, ignoring snapshot")
+                    return@addSnapshotListener
+                }
+
+                Log.d("HomeFragment", "📥 Received snapshot update")
+                processSnapshot(snapshots)
+            }
+    }
+
+    private fun setupAlternativeListener() {
+        Log.d("HomeFragment", "🔄 Setting up alternative listener (without orderBy)...")
+
+        tipsListener?.remove()
+        tipsListener = db.collection("daily_tips")
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) {
+                    Log.e("HomeFragment", "❌ Error in alternative listener: ${e.message}", e)
+                    setFallbackTip()
                     return@addSnapshotListener
                 }
 
                 if (!isAdded) return@addSnapshotListener
 
-                val firebaseTips = mutableListOf<String>()
-
-                snapshots?.documents?.forEach { document ->
-                    try {
-                        val tipText = document.getString("text")
-                        val createdBy = document.getString("createdByName") ?: "Pelatih"
-                        val isActive = document.getBoolean("isActive") ?: false
-
-                        if (tipText != null && tipText.isNotBlank() && isActive) {
-                            // Format tip dengan informasi pembuat
-                            val formattedTip = "💡 $tipText\n\n- $createdBy"
-                            firebaseTips.add(formattedTip)
-                            Log.d("HomeFragment", "Added tip: ${tipText.take(30)}...")
-                        }
-                    } catch (ex: Exception) {
-                        Log.w("HomeFragment", "Error parsing tip document: ${ex.message}")
-                    }
-                }
-
-                if (firebaseTips.isNotEmpty()) {
-                    Log.d("HomeFragment", "Successfully loaded ${firebaseTips.size} tips from Firebase")
-                    // Pilih tip secara random dari tips yang aktif
-                    val randomTip = firebaseTips.random()
-                    updateTipWithAnimation(randomTip)
-                } else {
-                    Log.d("HomeFragment", "No active tips found, using fallback")
-                    setFallbackTip()
-                }
+                Log.d("HomeFragment", "📥 Received alternative snapshot update")
+                processSnapshot(snapshots)
             }
     }
 
-    private fun updateTipWithAnimation(newTip: String) {
-        // Cek apakah tip berbeda untuk menghindari animasi yang tidak perlu
-        if (tvDailyTip.text.toString() != newTip) {
-            Log.d("HomeFragment", "Updating tip with animation")
+    private fun processSnapshot(snapshots: com.google.firebase.firestore.QuerySnapshot?) {
+        Log.d("HomeFragment", "🔍 Processing snapshot...")
 
-            // Fade out current tip, then fade in new tip
+        if (snapshots == null) {
+            Log.w("HomeFragment", "⚠️ Snapshots is null")
+            setFallbackTip()
+            return
+        }
+
+        Log.d("HomeFragment", "📊 Snapshot contains ${snapshots.documents.size} documents")
+
+        val allTips = mutableListOf<String>()
+        val activeTips = mutableListOf<String>()
+
+        snapshots.documents.forEachIndexed { index, document ->
+            try {
+                val tipText = document.getString("text")
+                val createdBy = document.getString("createdBy")
+                val createdByName = document.getString("createdByName") ?: "Pelatih"
+                val isActive = document.getBoolean("isActive") ?: true
+
+                Log.d("HomeFragment", "📋 Processing tip $index:")
+                Log.d("HomeFragment", "   - Text: ${tipText?.take(50)}...")
+                Log.d("HomeFragment", "   - CreatedBy: $createdBy")
+                Log.d("HomeFragment", "   - CreatedByName: $createdByName")
+                Log.d("HomeFragment", "   - IsActive: $isActive")
+
+                if (tipText != null && tipText.isNotBlank()) {
+                    val formattedTip = "💡 $tipText\n\n- $createdByName"
+                    allTips.add(formattedTip)
+
+                    if (isActive) {
+                        activeTips.add(formattedTip)
+                        Log.d("HomeFragment", "✅ Added active tip: ${tipText.take(30)}...")
+                    } else {
+                        Log.d("HomeFragment", "⏸️ Skipped inactive tip: ${tipText.take(30)}...")
+                    }
+                }
+            } catch (ex: Exception) {
+                Log.e("HomeFragment", "❌ Error parsing tip document at index $index", ex)
+            }
+        }
+
+        Log.d("HomeFragment", "📈 Summary:")
+        Log.d("HomeFragment", "   - Total tips: ${allTips.size}")
+        Log.d("HomeFragment", "   - Active tips: ${activeTips.size}")
+
+        when {
+            activeTips.isNotEmpty() -> {
+                val randomTip = activeTips.random()
+                Log.d("HomeFragment", "🎯 Displaying active tip: ${randomTip.take(50)}...")
+                updateTipWithAnimation(randomTip)
+            }
+            allTips.isNotEmpty() -> {
+                val randomTip = allTips.random()
+                Log.d("HomeFragment", "🎯 Displaying any available tip: ${randomTip.take(50)}...")
+                updateTipWithAnimation(randomTip)
+            }
+            else -> {
+                Log.d("HomeFragment", "❌ No tips found, showing fallback")
+                setFallbackTip()
+            }
+        }
+    }
+
+    private fun updateTipWithAnimation(newTip: String) {
+        Log.d("HomeFragment", "🎬 Updating tip with animation")
+        Log.d("HomeFragment", "   - Current tip: ${tvDailyTip.text}")
+        Log.d("HomeFragment", "   - New tip: $newTip")
+
+        // Check if the tip is different to avoid unnecessary animations
+        if (tvDailyTip.text.toString() != newTip) {
+            Log.d("HomeFragment", "✨ Animating tip change")
+
+            // Fade out the current tip, then fade in the new tip
             tvDailyTip.animate()
                 .alpha(0f)
                 .setDuration(300)
@@ -169,23 +269,14 @@ class HomeFragment : Fragment() {
         } else {
             // If same text, just make sure it's visible
             tvDailyTip.alpha = 1f
+            Log.d("HomeFragment", "🔄 Tip unchanged, keeping current display")
         }
     }
 
     private fun setFallbackTip() {
-        Log.d("HomeFragment", "Using fallback tips")
-        val fallbackTips = listOf(
-            "💧 Minum air putih minimal 8 gelas per hari untuk menjaga hidrasi tubuh.",
-            "🥗 Konsumsi buah dan sayuran berwarna-warni setiap hari untuk nutrisi yang seimbang.",
-            "🏃‍♂️ Lakukan olahraga ringan selama 30 menit setiap hari untuk menjaga kebugaran.",
-            "😴 Tidur cukup 7-8 jam per hari untuk pemulihan tubuh yang optimal.",
-            "🧘‍♀️ Luangkan waktu untuk relaksasi dan mengurangi stres dalam kehidupan harian.",
-            "🚶‍♀️ Berjalan kaki minimal 10.000 langkah setiap hari untuk kesehatan jantung.",
-            "🍎 Pilih makanan segar daripada makanan olahan untuk nutrisi terbaik."
-        )
-
-        val randomTip = fallbackTips.random() + "\n\n- Tips Default"
-        updateTipWithAnimation(randomTip)
+        Log.d("HomeFragment", "🔔 Showing 'no tips' message")
+        val noTipsMessage = "🔔 Belum ada tips dari pelatih.\n\nSilakan tunggu pelatih menambahkan tips untuk Anda!"
+        updateTipWithAnimation(noTipsMessage)
     }
 
     private fun calculateAndDisplayWeightTarget(weight: Double, height: Double) {
@@ -294,14 +385,14 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        Log.d("HomeFragment", "Fragment resumed, refreshing data...")
+        Log.d("HomeFragment", "🔄 Fragment resumed, refreshing data...")
         // Refresh data when fragment becomes visible
         loadUserData()
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        Log.d("HomeFragment", "Fragment destroyed, cleaning up...")
+        Log.d("HomeFragment", "🧹 Fragment destroyed, cleaning up...")
 
         // Clean up any running animations or handlers
         tvDailyTip.handler?.removeCallbacksAndMessages(null)
@@ -313,7 +404,7 @@ class HomeFragment : Fragment() {
 
     override fun onPause() {
         super.onPause()
-        Log.d("HomeFragment", "Fragment paused")
+        Log.d("HomeFragment", "⏸️ Fragment paused")
         // Listener tetap aktif saat pause untuk menjaga sinkronisasi real-time
     }
 }

@@ -1,45 +1,43 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.navigasi
 
 import android.animation.ValueAnimator
-import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
-import com.farhan.aplikasidietuntukobesitas.HomeFragment
-import com.farhan.aplikasidietuntukobesitas.ProfileFragment
-import com.farhan.aplikasidietuntukobesitas.ProgressFragment
+import com.farhan.aplikasidietuntukobesitas.R
+import com.farhan.aplikasidietuntukobesitas.users.HomeFragment
+import com.farhan.aplikasidietuntukobesitas.users.ProfileFragment
+import com.farhan.aplikasidietuntukobesitas.users.ProgressFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var bottomNavigation: BottomNavigationView
     private var currentFragment: Fragment? = null
+    private var isFragmentLoaded = false // Flag untuk tracking apakah fragment sudah di-load
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         // Initialize Firebase
         auth = FirebaseAuth.getInstance()
 
         // Initialize views
         initializeViews()
 
-        // Setup initial fragment with animation
-        loadInitialFragment()
-
-        // Setup navigation
+        // Setup navigation (tidak load fragment awal)
         setupBottomNavigation()
 
         // Apply entrance animations
         applyEntranceAnimations()
+
+        // Set default selection tanpa load fragment
+        bottomNavigation.selectedItemId = R.id.nav_home
     }
 
     private fun initializeViews() {
@@ -50,19 +48,25 @@ class MainActivity : AppCompatActivity() {
         window.navigationBarColor = ContextCompat.getColor(this, R.color.background_light)
     }
 
-    private fun loadInitialFragment() {
-        val homeFragment = HomeFragment()
-        currentFragment = homeFragment
+    private fun loadFragmentForFirstTime(fragment: Fragment) {
+        if (!isFragmentLoaded) {
+            // Load fragment pertama kali dengan animasi khusus
+            supportFragmentManager.beginTransaction()
+                .setCustomAnimations(
+                    R.anim.slide_in_up,
+                    R.anim.slide_out_down,
+                    R.anim.slide_in_down,
+                    R.anim.slide_out_up
+                )
+                .replace(R.id.fragment_container, fragment)
+                .commit()
 
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_up,
-                R.anim.slide_out_down,
-                R.anim.slide_in_down,
-                R.anim.slide_out_up
-            )
-            .replace(R.id.fragment_container, homeFragment)
-            .commit()
+            currentFragment = fragment
+            isFragmentLoaded = true
+        } else {
+            // Load fragment biasa dengan animasi transisi
+            replaceFragmentWithAnimation(fragment)
+        }
     }
 
     private fun setupBottomNavigation() {
@@ -84,8 +88,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             selectedFragment?.let { fragment ->
+                // Cek apakah fragment yang dipilih berbeda dengan fragment saat ini
                 if (currentFragment?.javaClass != fragment.javaClass) {
-                    replaceFragmentWithAnimation(fragment)
+                    // Load fragment (pertama kali atau ganti fragment)
+                    loadFragmentForFirstTime(fragment)
                     currentFragment = fragment
                 }
             }
@@ -125,9 +131,23 @@ class MainActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         if (bottomNavigation.selectedItemId != R.id.nav_home) {
+            // Jika bukan di home, pindah ke home
             bottomNavigation.selectedItemId = R.id.nav_home
         } else {
+            // Jika sudah di home atau belum ada fragment yang di-load, keluar dari aplikasi
             super.onBackPressed()
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Simpan state fragment yang sudah di-load
+        outState.putBoolean("fragment_loaded", isFragmentLoaded)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        // Restore state fragment
+        isFragmentLoaded = savedInstanceState.getBoolean("fragment_loaded", false)
     }
 }

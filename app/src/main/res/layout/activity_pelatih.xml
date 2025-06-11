@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:id="@+id/main"
     android:background="#F5F5F5"
-    tools:context=".PelatihActivity">
+    tools:context=".pelatih.PelatihActivity">
 
     <LinearLayout
         android:layout_width="match_parent"

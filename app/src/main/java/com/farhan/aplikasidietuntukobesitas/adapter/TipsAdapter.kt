@@ -1,4 +1,4 @@
-package com.farhan.aplikasidietuntukobesitas
+package com.farhan.aplikasidietuntukobesitas.adapter
 
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +7,8 @@ import android.widget.ImageButton
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.farhan.aplikasidietuntukobesitas.R
+import com.farhan.aplikasidietuntukobesitas.pelatih.PelatihActivity
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -59,7 +61,9 @@ class TipsAdapter(
 
                 // Set text color dengan fallback
                 try {
-                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, R.color.status_active))
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context,
+                        R.color.status_active
+                    ))
                 } catch (e: Exception) {
                     tvStatus.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.holo_green_dark))
                 }
@@ -77,7 +81,9 @@ class TipsAdapter(
 
                 // Set text color dengan fallback
                 try {
-                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context, R.color.status_inactive))
+                    tvStatus.setTextColor(ContextCompat.getColor(itemView.context,
+                        R.color.status_inactive
+                    ))
                 } catch (e: Exception) {
                     tvStatus.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 }
